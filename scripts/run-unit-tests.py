@@ -33,13 +33,22 @@ gtestFilter = ""
 if len(sys.argv) > 1:
     gtestFilter = "--gtest_filter={}".format(sys.argv[1])
 
+useValgrind=False
+if os.environ.has_key('USEVALGRIND') and os.environ['USEVALGRIND'] == 'yes':
+    print "######## GOBBLES"
+    useValgrind=True
+
 testSuites = { }
-def runTestSuite(binary, name):
+def runTestSuite(binary, name, useValgrind=False):
     outputFile = "{}_unittest_result.xml".format(name)
     if os.path.exists(outputFile):
         os.remove(outputFile)
 
-    command = "{} {} --gtest_output=xml:{}".format(binary, gtestFilter, outputFile)
+    valgrind=""
+    if useValgrind is True:
+        valgrind="valgrind --leak-check=yes --xml=yes --xml-file={}_unittest_valgrind.xml".format(name)
+
+    command = "{} {} {} --gtest_output=xml:{}".format(valgrind, binary, gtestFilter, outputFile)
     exitCode = os.system(command)
     testSuites[name] = exitCode
 
@@ -49,9 +58,10 @@ def runTestSuite(binary, name):
 #
 
 # These are proper unit tests
-runTestSuite("./agent/unit-test/softwarecontaineragent-unit-test", "ConfigStoreTest")
-runTestSuite("./common/unit-test/softwarecontainercommon-unit-test", "CommonTest")
-runTestSuite("./libsoftwarecontainer/unit-test/softwarecontainer-unit-test", "LibUnitTests")
+
+runTestSuite("./agent/unit-test/softwarecontaineragent-unit-test", "ConfigStoreTest", useValgrind)
+runTestSuite("./common/unit-test/softwarecontainercommon-unit-test", "CommonTest", useValgrind)
+runTestSuite("./libsoftwarecontainer/unit-test/softwarecontainer-unit-test", "LibUnitTests", useValgrind)
 
 retval = 0
 for name, exitCode in testSuites.items():
